@@ -1,2 +1,0 @@
-LitSPMOdd_job
-LitSPMEven_job

@@ -12,3 +12,18 @@ for d in */ ; do
   zip -rm ${d%*/} ${d%*/}
   echo "${d%*/} done"
 done
+
+for i in `seq -w 1 60`; do
+  mkdir S${i}
+done
+
+#doing it again to get rid of run7
+for d in */ ; do
+  cp -R -n /Volumes/YWangWork/ChatLab/narrativefMRIdata/${d%*/}/session1 /Volumes/YWangWork/MRIdataNoRun7/${d%*/}
+  echo "${d%*/} done"
+done
+
+for d in */ ; do
+  rm -R /Volumes/YWangWork/MRIdataNoRun7/${d%*/}/session1/run7
+  echo "${d%*/} done"
+done

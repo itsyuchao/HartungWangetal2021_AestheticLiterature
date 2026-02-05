@@ -1,0 +1,472 @@
+---
+title: "Aesthetic Literature Project Scripts"
+author: "Yuchao Wang"
+date: "6/7/2020"
+output: pdf_document
+fontsize: 10pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Preprocessing of Qualtrics
+
+* Using a `.csv` file, `forWordSeparation_cleaned`, to create a *word* by *participant* matrix with behavioral ratings (*emotional intensity* or *literariness*) from Qualtrics survey outputs. 
+
+* Specifically, `forWordSeparation_cleaned.csv` is read in to create `template`, which is used to search for the rating per word per participant.   
+
+```{r Clean up raw ratings}
+library(tidyr)
+#Clean up csv files containing all rated words in survey----
+template <- read.csv(file = "Qualtrics/forWordSeparation_cleaned.csv", 
+                     header = F, sep = ",", stringsAsFactors = FALSE)
+template <- t(template) 
+colnames(template) <- template[1, ] 
+template <- template[-1, ]
+template <- as.data.frame(template) #data type converted to matrix after transpose, due to rectangular shape - force back into data frame for "gather"
+template <- gather(template, "qnLabel", "word", 1:17)
+template <- template[!(template$word == ""), ] 
+template <- template[ , c("word","qnLabel")]
+template$qnLabel <- trimws(template$qnLabel)
+template$qnLabel <- as.factor(template$qnLabel)
+template$qnLabel <- factor(template$qnLabel, levels = c("3.1","5.1","7.1","9.1",
+                                                        "11.1","13.1","15.1","17.1","19.1","24.1","26.1",
+                                                        "28.1","30.1","32.1","34.1","36.1","38.1")) #question numbers assigned by Qualtrics to make sure the searches later do not encounter conflicts of the same word with the same numbering ('1:Meneer') appearing in different excerpts 
+qnLabel <- levels(template$qnLabel)
+
+
+#Match emo results----    
+emoResult <- read.csv(file="Qualtrics/Verhalen_Emotional+Arousal_10_1_19_deidentified.csv", 
+                  header = TRUE, sep = ",", stringsAsFactors = FALSE)
+emoResult <- emoResult[-c(1,2), ] #get rid of title row
+emoResult <- emoResult[-c(1:9), ] #get rid of preview Test results
+emoResult <- emoResult[-c(15:17,28), ] #get rid of incomplete results
+
+
+totalParticipant <- nrow(emoResult)
+totalWord <- nrow(template)
+emoResultClean <- template
+
+
+for (indexResponse in 1:totalParticipant) {
+  for (indexWord in 1:totalWord) {
+    searchWord <- template[indexWord,1]
+    searchQn <- template[indexWord,2]
+    resultCol <- indexResponse+2
+    emoResultClean[indexWord,resultCol] <- NA #initialize a new column
+      for (possibleRating in 1:7) {
+        if (!is.na(emoResultClean[indexWord,resultCol])) {
+          break
+        }
+        currentColName <- paste ("Q", searchQn, "_", possibleRating, sep = "", collapse = NULL)
+        if (grepl(searchWord, emoResult[indexResponse,currentColName], fixed = TRUE)) {
+            emoResultClean[indexWord,resultCol] <- substr(currentColName, 
+                                                          nchar(currentColName), nchar(currentColName))        
+        }
+        else {
+          if ((possibleRating == 7) & (is.na(emoResultClean[indexWord,resultCol]))) {
+            emoResultClean[indexWord,resultCol] <- NA
+          }
+        }
+      }
+  }
+}
+
+
+#Match lit results----
+litResult <- read.csv(file="Qualtrics/Verhalen_Literariness_10_1_19_deidentified.csv", 
+                  header = TRUE, sep = ",", stringsAsFactors = FALSE)
+litResult <- litResult[-c(1,2), ] #get rid of title row
+litResult <- litResult[-c(1:10), ] #get rid of preview Test results
+
+
+totalParticipant <- nrow(litResult)
+totalWord <- nrow(template)
+litResultClean <- template
+
+
+for (indexResponse in 1:totalParticipant) {
+  for (indexWord in 1:totalWord) {
+    searchWord <- template[indexWord,1]
+    searchQn <- template[indexWord,2]
+    resultCol <- indexResponse+2
+    litResultClean[indexWord,resultCol] <- NA #initialize a new column
+      for (possibleRating in 1:2) {
+        if (!is.na(litResultClean[indexWord,resultCol])) {
+          break
+        }
+        currentColName <- paste ("Q", searchQn, "_", possibleRating, sep = "", collapse = NULL)
+        if (grepl(searchWord, litResult[indexResponse,currentColName], fixed = TRUE)) {
+            litResultClean[indexWord,resultCol] <- substr(currentColName, 
+                                                          nchar(currentColName), nchar(currentColName))        
+        }
+        else {
+          if ((possibleRating == 2) & (is.na(litResultClean[indexWord,resultCol]))) {
+            litResultClean[indexWord,resultCol] <- NA
+          }
+        }
+      }
+  }
+}
+
+```
+
+## Stats - Intraclass Correlation Coefficient
+
+* To check how well participants agree with each other on ratings. 
+
+```{r Intraclass Correlation Coefficient}
+library(lme4)
+library(psych)
+emoResultCleanICC <- matrix(data = NA, nrow = 0, ncol = 27)
+for (index in 1:2354) {
+  emoResultCleanICC <- rbind(emoResultCleanICC, emoResultClean[index, 3:29])
+}
+for (j in 1:27) {
+    emoResultCleanICC[,j] <- as.numeric(emoResultCleanICC[,j])
+}
+ICC(emoResultCleanICC, missing = FALSE, alpha = 0.05)
+
+
+litResultCleanICC <- matrix(data = NA, nrow = 0, ncol = 27)
+for (index in 1:2354) {
+  litResultCleanICC <- rbind(litResultCleanICC, litResultClean[index, 3:29])
+}
+for (j in 1:27) {
+    litResultCleanICC[,j] <- as.numeric(litResultCleanICC[,j])
+}
+ICC(litResultCleanICC, missing = FALSE, alpha = 0.05)
+
+```
+
+## Stats - Emo ~ Lit by story
+
+* By story 
+* To check if *emotional intensity* and *literariness* are distinct and can serve as regressors in separate fMRI GLMs.
+* Specifically, checked both the correlation using 1. the original word-by-word mean values and 2. the rollmean with two preceding and two succeeding words
+
+```{r Correlation of Emo~Lit, warning=FALSE}
+#Simple linear regression ANOVA of Emo on Lit ratings, with and without boxcar smoothing 
+library(zoo)
+library(psych)
+
+#EMO
+temoResultClean <- t(emoResultClean)
+temoResultClean <- temoResultClean[-c(1:2),]
+
+emoTrend <- describe(temoResultClean)
+emoDHTrend <- emoTrend[c(1:1237),]
+emoDMTrend <- emoTrend[c(1238:2354),]
+emoDMTrend$vars <- seq(length=nrow(emoDMTrend)) 
+
+
+#LIT
+tlitResultClean <- t(litResultClean)
+tlitResultClean <- tlitResultClean[-c(1:2),]
+litTrend <- describe(tlitResultClean)
+litDHTrend <- litTrend[c(1:1237),]
+litDMTrend <- litTrend[c(1238:2354),]
+litDMTrend$vars <- seq(length=nrow(litDMTrend)) 
+
+#Cor.test
+emoDHTrend <- cbind(emoDHTrend, rollmean(emoDHTrend$mean, k = 5, fill = NA, align = "center"))
+names(emoDHTrend)[14] <- "rollmean"
+litDHTrend <- cbind(litDHTrend, rollmean(litDHTrend$mean, k = 5, fill = NA, align = "center"))
+names(litDHTrend)[14] <- "rollmean"
+cor.test(emoDHTrend$mean, litDHTrend$mean, method = "pearson")
+cor.test(emoDHTrend$rollmean, litDHTrend$rollmean, method = "pearson")
+
+
+emoDMTrend <- cbind(emoDMTrend, rollmean(emoDMTrend$mean, k = 5, fill = NA, align = "center"))
+names(emoDMTrend)[14] <- "rollmean"
+litDMTrend <- cbind(litDMTrend, rollmean(litDMTrend$mean, k = 5, fill = NA, align = "center"))
+names(litDMTrend)[14] <- "rollmean"
+cor.test(emoDMTrend$mean, litDMTrend$mean, method = "pearson")
+cor.test(emoDMTrend$rollmean, litDMTrend$rollmean, method = "pearson")
+```
+
+## Match word ratings with onset 
+
+* Match Qualtrics ratings per word (for 1st person perspective stories) with the onset time of that word in both 1st and 3rd person perspective story recordings. 
+* Praat timing files adjusted to eliminate mismatches due to formatting or transcription differences. 
+* Add a column `onset`. 
+
+```{r match Praat Timing}
+#READ IN ALL 4 ADJUSTED PRAAT WORD ONSETS AND DURATIONS----
+colLabel <- c("Word", "Onset", "Duration")
+DHO <- read.delim("Praat/De Hond_O_adjusted.csv", header = FALSE, sep = ",", stringsAsFactors = FALSE)
+DHO <- DHO[-c(1:3), ] #get rid of title
+colnames(DHO) <- colLabel
+
+DMO <- read.delim("Praat/De Muur_O_adjusted.csv", header = FALSE, sep = ",", stringsAsFactors = FALSE)
+DMO <- DMO[-c(1,2), ] #get rid of title
+colnames(DMO) <- colLabel
+
+DH2V <- read.delim("Praat/De Hond_2V_adjusted.csv", header = FALSE, sep = ",", stringsAsFactors = FALSE)
+DH2V <- DH2V[-c(1:3), ] #get rid of title
+colnames(DH2V) <- colLabel
+
+DM2V <- read.delim("Praat/De Muur_2V_adjusted.csv", header = FALSE, sep = ",", stringsAsFactors = FALSE)
+DM2V <- DM2V[-c(1,2), ] #get rid of title
+colnames(DM2V) <- colLabel
+
+#MATCH, FOR ORIGINAL(FIRST PERSON PERSPEC), THE TIMING WITH RATED WORDS----
+
+#SETUP 
+colNumEmo <- ncol(emoResultClean)
+colNumLit <- ncol(litResultClean)
+
+emoOGwTiming <- emoResultClean
+emo2VwTiming <- emoResultClean
+litOGwTiming <- litResultClean
+lit2VwTiming <- litResultClean
+
+
+addTimingCols <- function(totalWord, praatClean, resultClean, resultwTiming, colNum) {
+  if (totalWord == 1237) {
+     for (index in 1:totalWord) {
+        if (grepl(praatClean[index,1], resultClean[index,1], fixed = TRUE)) {
+          resultwTiming[index, c(colNum+1, colNum+2)] <- praatClean[index, c(2,3)]
+        }
+        else {
+          resultwTiming[index, c(colNum+1, colNum+2)] <- c("mismatch", "mismatch")
+        }
+     }
+  }
+  else {
+    for (index in 1:totalWord) {
+      if (grepl(praatClean[index,1], resultClean[index + 1237,1], fixed = TRUE)) {
+        resultwTiming[index + 1237, c(colNum+1, colNum+2)] <- praatClean[index, c(2,3)]
+      }
+      else {
+        resultwTiming[index + 1237, c(colNum+1, colNum+2)] <- c("mismatch", "mismatch")
+      }
+    }
+  }
+  return(resultwTiming)
+}
+
+emoOGwTiming <- addTimingCols(1237, DHO, emoResultClean, emoOGwTiming, colNumEmo)
+emoOGwTiming <- addTimingCols(1117, DMO, emoResultClean, emoOGwTiming, colNumEmo)
+litOGwTiming <- addTimingCols(1237, DHO, litResultClean, litOGwTiming, colNumLit)
+litOGwTiming <- addTimingCols(1117, DMO, litResultClean, litOGwTiming, colNumLit)
+emo2VwTiming <- addTimingCols(1237, DH2V, emoResultClean, emo2VwTiming, colNumEmo)
+emo2VwTiming <- addTimingCols(1117, DM2V, emoResultClean, emo2VwTiming, colNumEmo)
+lit2VwTiming <- addTimingCols(1237, DH2V, litResultClean, lit2VwTiming, colNumLit)
+lit2VwTiming <- addTimingCols(1117, DM2V, litResultClean, lit2VwTiming, colNumLit)
+```
+
+## Add mean and SE for behavioral ratings 
+
+* Add rating mean and SE as additional columns to matrix, and clean mismatched rows 
+* Save resulted matrix per story (`DM` and `DH`) per perspective (`O` and `2V`) per rating (`emo` and `lit`) as `.csv` files.  
+
+```{r add mean and SE columns}
+stderr <- function(x) {
+  sd(x, na.rm = TRUE)/sqrt(length(x[!is.na(x)]))
+}
+
+addMNSECol <- function(resultwTiming, colNum) {
+  for (colIndex in 3: colNum) { 
+    resultwTiming[, colIndex] <- as.numeric(resultwTiming[, colIndex])
+  }
+  resultwTiming <- transform(resultwTiming, MN = rowMeans(resultwTiming[ ,3:colNum], na.rm = TRUE))
+  rowNum <- nrow(resultwTiming)
+  for (rowIndex in 1:rowNum) {
+    resultwTiming[rowIndex, colNum+4] <- stderr(resultwTiming[rowIndex, 3:colNum])
+  }
+  names(resultwTiming)[colNum+4] <- 'SE'
+  return(resultwTiming)
+}
+
+emoOGwTiming <- addMNSECol(emoOGwTiming, colNumEmo)
+emo2VwTiming <- addMNSECol(emo2VwTiming, colNumEmo)
+litOGwTiming <- addMNSECol(litOGwTiming, colNumLit)
+lit2VwTiming <- addMNSECol(lit2VwTiming, colNumLit)
+
+
+
+#WRITE OUTPUT FILES
+emoDHOFinal <- matrix(data = NA, nrow = 0, ncol = colNumEmo+4)
+emoDMOFinal <- matrix(data = NA, nrow = 0, ncol = colNumEmo+4)
+emoDH2VFinal <- matrix(data = NA, nrow = 0, ncol = colNumEmo+4)
+emoDM2VFinal <- matrix(data = NA, nrow = 0, ncol = colNumEmo+4)
+litDHOFinal <- matrix(data = NA, nrow = 0, ncol = colNumLit+4)
+litDMOFinal <- matrix(data = NA, nrow = 0, ncol = colNumLit+4)
+litDH2VFinal <- matrix(data = NA, nrow = 0, ncol = colNumLit+4)
+litDM2VFinal <- matrix(data = NA, nrow = 0, ncol = colNumLit+4)
+
+#This function cleans mismatched entries and write CSV output files. 
+cleanOutput <- function(totalWord, colNum, rawData, outputFile, outputName) {
+  if (totalWord == 1237) {
+    for (index in 1:totalWord) {
+      if ((rawData[index, colNum+2] == "mismatch") | (rawData[index, colNum+2] == "0")) {
+        next
+      }
+      else {
+        outputFile <- rbind(outputFile, rawData[index, ])
+      }
+    }
+  }
+  else {
+    for (index in 1:totalWord) {
+      if ((rawData[index+1237, colNum+2] == "mismatch") | (rawData[index+1237, colNum+2] == "0")) {
+        next
+      }
+      else {
+        outputFile <- rbind(outputFile, rawData[index+1237, ])
+      }
+    }
+  }
+  write.csv(outputFile, file = paste("ProcessedByWord/", outputName, ".csv", sep=""))
+  return(outputFile)
+}
+
+
+emoDHOFinal <- cleanOutput(1237, colNumEmo, emoOGwTiming, emoDHOFinal, "emoDHOFinal")
+emoDMOFinal <- cleanOutput(1117, colNumEmo, emoOGwTiming, emoDMOFinal, "emoDMOFinal")
+emoDH2VFinal <- cleanOutput(1237, colNumEmo, emo2VwTiming, emoDH2VFinal, "emoDH2VFinal")
+emoDM2VFinal <- cleanOutput(1117, colNumEmo, emo2VwTiming, emoDM2VFinal, "emoDM2VFinal")
+litDHOFinal <- cleanOutput(1237, colNumLit, litOGwTiming, litDHOFinal, "litDHOFinal")
+litDMOFinal <- cleanOutput(1117, colNumLit, litOGwTiming, litDMOFinal, "litDMOFinal")
+litDH2VFinal <- cleanOutput(1237, colNumLit, lit2VwTiming, litDH2VFinal, "litDH2VFinal")
+litDM2VFinal <- cleanOutput(1117, colNumLit, lit2VwTiming, litDM2VFinal, "litDM2VFinal")
+
+```
+
+
+## Adding MN and Onset based on event boundaries 
+
+* Event boundaries were created by Franziska Hartung on the original, 1st person perspective version (`O`) of both stories. 
+* The same event boundaries were created on the 3rd person perspective versions (`2V`) using a separate script. 
+* **Do not** run this chunk again because all `_eventMarked.csv`, which initially only contains a column of event markers in addition to the *per word* `Final` files, have been processed to add MN and SE *per event*.   
+
+```{r New columns of event boundaries, eval=FALSE} 
+#DO NOT RUN this code chunk again. See above for details.
+emoDHOmarked <- read.csv(file = "emoDHOFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+emoDH2Vmarked <- read.csv(file = "emoDH2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+emoDMOmarked <- read.csv(file = "emoDMOFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+emoDM2Vmarked <- read.csv(file = "emoDM2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+litDHOmarked <- read.csv(file = "litDHOFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+litDH2Vmarked <- read.csv(file = "litDH2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+litDMOmarked <- read.csv(file = "litDMOFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+litDM2Vmarked <- read.csv(file = "litDM2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+
+addEventParam <- function(dataEventMarked) {
+#initialize condition for search
+  begin_row <- 1
+  end_row <- 1
+  total_row <- nrow(dataEventMarked)
+  #search loop 
+  while (end_row <= total_row) {
+    if  (is.na(dataEventMarked$marker_event[end_row])) {
+      end_row <- end_row+1
+    }
+    else {
+      dataEventMarked$onset_event[end_row] <- dataEventMarked$Onset[begin_row]
+      dataEventMarked$duration_event[end_row] <- sum(dataEventMarked$Duration[begin_row:end_row])
+      dataEventMarked$MN_event[end_row] <- mean(dataEventMarked$MN[begin_row:end_row], na.rm = TRUE)
+      begin_row <- end_row+1
+      end_row <- end_row+1
+    }
+  }
+  return(dataEventMarked)
+}
+
+emoDHOmarked <- addEventParam(emoDHOmarked)
+emoDH2Vmarked <- addEventParam(emoDH2Vmarked)
+emoDMOmarked <- addEventParam(emoDMOmarked)
+emoDM2Vmarked <- addEventParam(emoDM2Vmarked)
+litDHOmarked <- addEventParam(litDHOmarked)
+litDH2Vmarked <- addEventParam(litDH2Vmarked)
+litDMOmarked <- addEventParam(litDMOmarked)
+litDM2Vmarked <- addEventParam(litDM2Vmarked)
+
+write.csv(emoDHOmarked, file = "ProcessedByEvent/emoDHOFinal_eventMarked.csv", na = "")
+write.csv(emoDH2Vmarked, file = "ProcessedByEvent/emoDH2VFinal_eventMarked.csv", na = "")
+write.csv(emoDMOmarked, file = "ProcessedByEvent/emoDMOFinal_eventMarked.csv", na = "")
+write.csv(emoDM2Vmarked, file = "ProcessedByEvent/emoDM2VFinal_eventMarked.csv", na = "")
+write.csv(litDHOmarked, file = "ProcessedByEvent/litDHOFinal_eventMarked.csv", na = "")
+write.csv(litDH2Vmarked, file = "ProcessedByEvent/litDH2VFinal_eventMarked.csv", na = "")
+write.csv(litDMOmarked, file = "ProcessedByEvent/litDMOFinal_eventMarked.csv", na = "")
+write.csv(litDM2Vmarked, file = "ProcessedByEvent/litDM2VFinal_eventMarked.csv", na = "")
+```
+
+
+## Final Visualization
+
+* To be used in manuscript 
+* `OriginalCombined_eventMarked.csv` created by manually concatenating `emoDHOFinal_eventMarked`, `emoDMOFinal_eventMarked`, `litDHOFinal_eventMarked`, `litDMOFinal_eventMarked`. Then used Excel to binarize emotional and literary events according to midpoint (strictly over 4 for emotional intensity, strictly over 1.5 for literariness).
+* Overall plots of ratings against onset, per story, per type of rating (`emo` and `lit`). 
+* For 1. per word ratings 2. per semantic event ratings.
+* SE for literariness is remapped to 0 because its a binary decision and SE does not make sense.
+
+```{r Overall visualization facetgrid}
+library(ggplot2)
+
+allRatingMarked <- read.csv(file = "ProcessedByEvent/OriginalCombined_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+
+#correct for interpretation of literariness SE by changing all lit SE to 0 
+for (i in 1:nrow(allRatingMarked)) {
+  if (allRatingMarked$Rating[i] == "Literariness") {
+    allRatingMarked$SE[i] = 0 
+  }
+}
+
+limits <- aes(ymax = allRatingMarked$MN + allRatingMarked$SE, 
+                ymin = allRatingMarked$MN - allRatingMarked$SE)
+word_plot <- ggplot(data = allRatingMarked, aes(x = Onset, y = MN, color = Rating)) + 
+    geom_point(size=1.5, alpha = 0.7) +
+    geom_errorbar(limits, width = 0.1, alpha = 0.2) +
+    scale_color_manual(values=c("#DC3220", "#005AB5")) +
+    xlab("Word Onset Time (in sec)") +
+    ylab("Mean Rating") +
+    theme(text = element_text(size=15),  axis.ticks.x=element_blank(), legend.position="bottom") + 
+    facet_grid(Rating ~ Story, scales = "free_y")
+event_plot <- ggplot(data = allRatingMarked, aes(x = Onset_event, y = MN_event, color = Rating)) + 
+    geom_step(direction = "hv", size=0.5, alpha = 0.8) +
+    scale_color_manual(values=c("#DC3220", "#005AB5")) +
+    xlab("Event Onset Time (in sec)") +
+    ylab("Mean Rating") +
+    theme(text = element_text(size=15),  axis.ticks.x=element_blank(), legend.position="bottom") + 
+    facet_grid(Rating ~ Story, scales = "free_y")
+binevent_plot <- ggplot(data = allRatingMarked, aes(x = Onset_event, y = Bin_event, color = Rating)) + 
+    geom_step(direction = "hv", size=0.5, alpha = 0.8) +
+    scale_color_manual(values=c("#DC3220", "#005AB5")) +
+    xlab("Event Onset Time (in sec)") +
+    ylab("Binarized Rating") +
+    scale_y_continuous(breaks=c(0,1)) +
+    theme(text = element_text(size=15),  axis.ticks.x=element_blank(), legend.position="bottom") + 
+    facet_grid(Rating ~ Story, scales = "free_y")
+ggsave("RatingPlots/allWordRating.png", plot = word_plot, device = png(),
+    scale = 1, width = 400, height = 240, units = c("mm"),
+    dpi = 300, limitsize = TRUE)
+ggsave("RatingPlots/allEventRating.png", plot = event_plot, device = png(),
+    scale = 1, width = 400, height = 240, units = c("mm"),
+    dpi = 300, limitsize = TRUE)
+ggsave("RatingPlots/allBinEventRating.png", plot = binevent_plot, device = png(),
+    scale = 1, width = 400, height = 120, units = c("mm"),
+    dpi = 300, limitsize = TRUE)
+```
+
+
+## Stats - Emo ~ Lit (stories concatenated)
+
+* Using original, 1st perspec stories. 
+
+```{r All Emo~Lit} 
+allEmoWordRating <- unlist(subset(allRatingMarked, Rating == "Emotional Intensity", select = "MN"))
+allLitWordRating <- unlist(subset(allRatingMarked, Rating == "Literariness", select = "MN"))
+allEmoEventRating <- unlist(subset(allRatingMarked, Rating == "Emotional Intensity", select = "MN_event"))
+allLitEventRating <- unlist(subset(allRatingMarked, Rating == "Literariness", select = "MN_event"))
+cor.test(allEmoWordRating, allLitWordRating, method = "pearson")
+cor.test(allEmoEventRating, allLitEventRating, method = "pearson")
+
+#set.seed(20) 
+#randomLitRating <- runif(2344, 1, 2)
+#cor.test(allEmoWordRating, randomLitRating, method = "pearson")
+```
+
+
+

@@ -1,3 +1,4 @@
-# scriptsThesis
-Scripts I wrote or modified for use in my thesis project.
+# Thesis utils
+Scripts I wrote or modified for undergrad thesis. With figures. 
+
 Yuchao Wang, 2019. 

@@ -1,0 +1,318 @@
+---
+title: "ROI_analysis"
+author: "Yuchao Wang"
+date: "6/10/2020"
+fontsize: 12pt
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+```{r, warning=FALSE}
+library(readxl)
+ROI_analysis <- read_excel("~/Desktop/ROI_analysis.xlsx")
+ROI_analysis$Imagery_items <- as.numeric(ROI_analysis$Imagery_items)
+ROI_analysis$Emotional_Engagement_items <- as.numeric(ROI_analysis$Emotional_Engagement_items)
+library(lme4)
+library(ggplot2)
+library(GGally)
+
+#exploratory data analysis
+ggpairs(data = ROI_analysis[, c("beta_EmoNeg_Cbellum", "beta_EmoNeg_rParahipp", "beta_EmoNeg_rMFG",
+                                "beta_EmoNeg_ParietalL", "beta_EmoNeg", "psc_EmoNeg" )])
+ggpairs(data = ROI_analysis[,c("beta_LitPos_IFG", "beta_LitPos_IPL",
+                                "beta_LitPos_Precu", "beta_LitNeg_lSTL", "beta_LitNeg_rSTL")])
+ggpairs(data = ROI_analysis[, c("beta_LitPos_IFG", "beta_LitPos_IPL", "beta_LitPos_Precu",
+                                "beta_LitNeg", "beta_EmoNeg", "beta_EmoNeg_Cbellum", 
+                                "beta_EmoNeg_rParahipp", "beta_EmoNeg_rMFG", "beta_EmoNeg_ParietalL")])
+# ggpairs(data = ROI_analysis[, c("interesting", "wellwritten", "of_high_literary_quality",
+#                                 "easy_to_understand", "accessible", "thrilling", "beautiful",
+#                                 "fascinating", "emotional", "sad")])
+ggpairs(data = ROI_analysis[, c("care_about_style", "like_fiction", "num_novels_lastyr", 
+                                "often_read", "IRI_fantasy", "need_for_cognition", 
+                                "need_for_affect", "author_recog", "EQ")])
+ggpairs(data = ROI_analysis[, c("psc_FPAN_BinEmoNeg", "psc_FCN_BinEmoNeg", "psc_precu_BinEmoNeg", "psc_lSFG_BinEmoPos")])
+
+
+#Output 18 figures to PDF file
+pdf("ROI_rho_binarized.pdf", height = 15, width = 20)
+
+
+print(ggpairs(data = ROI_analysis[, c("psc_FPAN_BinEmoNeg", "care_about_style", "like_fiction", "num_novels_lastyr",
+                                "often_read", "IRI_fantasy", "need_for_cognition",
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_FCN_BinEmoNeg", "care_about_style", "like_fiction", "num_novels_lastyr",
+                                "often_read", "IRI_fantasy", "need_for_cognition",
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_precu_BinEmoNeg", "care_about_style", "like_fiction", "num_novels_lastyr",
+                                "often_read", "IRI_fantasy", "need_for_cognition",
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lSFG_BinEmoPos", "care_about_style", "like_fiction", "num_novels_lastyr",
+                                "often_read", "IRI_fantasy", "need_for_cognition",
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lIFG_BinLitPos", "care_about_style", "like_fiction", "num_novels_lastyr",
+                                "often_read", "IRI_fantasy", "need_for_cognition",
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lSPL_BinLitPos", "care_about_style", "like_fiction", "num_novels_lastyr",
+                                "often_read", "IRI_fantasy", "need_for_cognition",
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lSMG_BinLitPos", "care_about_style", "like_fiction", "num_novels_lastyr",
+                                "often_read", "IRI_fantasy", "need_for_cognition",
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_biMTG_BinLitNeg", "care_about_style", "like_fiction", "num_novels_lastyr",
+                                "often_read", "IRI_fantasy", "need_for_cognition",
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lAG_BinLitPos", "care_about_style", "like_fiction", "num_novels_lastyr", 
+                                "often_read", "IRI_fantasy", "need_for_cognition", 
+                                "need_for_affect", "author_recog", "EQ")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+
+
+
+
+print(ggpairs(data = ROI_analysis[, c("psc_FPAN_BinEmoNeg", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_FCN_BinEmoNeg", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_precu_BinEmoNeg", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lSFG_BinEmoPos", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lIFG_BinLitPos", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lSPL_BinLitPos", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lSMG_BinLitPos", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_biMTG_BinLitNeg", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+print(ggpairs(data = ROI_analysis[, c("psc_lAG_BinLitPos", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")],
+              upper = list(continuous = wrap('cor',method="spearman"))))
+
+dev.off()
+```
+
+```{r, eval=FALSE}
+
+#"beta_EmoNeg_Cbellum", "beta_EmoNeg_rParahipp", "beta_EmoNeg_rMFG", "beta_EmoNeg_ParietalL", "beta_EmoNeg", "psc_EmoNeg"
+#"beta_LitPos_IFG", "beta_LitPos_IPL", "beta_LitPos_Precu", "beta_LitNeg_lSTL", "beta_LitNeg_rSTL"
+ggpairs(data = ROI_analysis[, c("beta_EmoNeg_ParietalL", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")])
+ggpairs(data = ROI_analysis[, c("beta_EmoNeg_rMFG", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")])
+ggpairs(data = ROI_analysis[, c("beta_EmoNeg", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")])
+ggpairs(data = ROI_analysis[, c("beta_LitPos_IFG", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")])
+ggpairs(data = ROI_analysis[, c("beta_LitPos_IPL", "pc1_wellwritten", "pc2_accessible", "pc3_interesting",
+                                "Imagery_items", "Emotional_Engagement_items")])
+# #ROI predicted by per story 10 item ratings
+# lmIFG_10item <- lmer(beta_LitPos_IFG ~ interesting + wellwritten + of_high_literary_quality +
+#                   easy_to_understand + accessible + thrilling + beautiful + fascinating +
+#                   emotional + sad + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmIFG_10item)
+# lmFPCN_10item <- lmer(beta_EmoNeg ~ interesting + wellwritten + of_high_literary_quality +
+#                   easy_to_understand + accessible + thrilling + beautiful + fascinating +
+#                   emotional + sad + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmFPCN_10item)
+# lmIPL_10item <- lmer(beta_LitPos_IPL ~ interesting + wellwritten + of_high_literary_quality +
+#                   easy_to_understand + accessible + thrilling + beautiful + fascinating +
+#                   emotional + sad + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmIPL_10item)
+# lmPrecu_10item <- lmer(beta_LitPos_Precu ~ interesting + wellwritten + 
+#                       of_high_literary_quality +
+#                   easy_to_understand + accessible + thrilling + beautiful + fascinating +
+#                   emotional + sad + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmPrecu_10item)
+# lmSTG_10item <- lmer(beta_LitNeg ~ interesting + wellwritten + of_high_literary_quality +
+#                   easy_to_understand + accessible + thrilling + beautiful + fascinating +
+#                   emotional + sad + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmSTG_10item)
+
+#ROI predicted by principle components
+#LitPos_IFG
+lmIFG_pc1 <- lmer(beta_LitPos_IFG ~ pc1_wellwritten + (wellwritten|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc1)
+lmIFG_pc2 <- lmer(beta_LitPos_IFG ~ pc2_accessible + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc2)
+lmIFG_pc3 <- lmer(beta_LitPos_IFG ~ pc3_interesting + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc3)
+lmIFG_imagery <- lmer(beta_LitPos_IFG ~ Imagery_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_imagery)
+lmIFG_EmoEng <- lmer(beta_LitPos_IFG ~ Emotional_Engagement_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_EmoEng)
+anova(lmIFG_pc1, lmIFG_pc2, lmIFG_pc3) #pc1 better than pc3
+anova(lmIFG_imagery, lmIFG_EmoEng) #no sig diff
+
+lmIFG_pc1xstyle <- lmer(beta_LitPos_IFG ~ pc1_wellwritten * care_about_style + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc1xstyle)
+anova(lmIFG_pc1, lmIFG_pc1xstyle) #p=0.10
+lmIFG_pc1xfreqread <- lmer(beta_LitPos_IFG ~ pc1_wellwritten * often_read + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc1xfreqread)
+anova(lmIFG_pc1, lmIFG_pc1xfreqread) #p=0.078
+lmIFG_pc1xnumnovels <- lmer(beta_LitPos_IFG ~ pc1_wellwritten * num_novels_lastyr + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc1xnumnovels)
+anova(lmIFG_pc1, lmIFG_pc1xnumnovels) #p=0.59
+lmIFG_pc1xlikefic <- lmer(beta_LitPos_IFG ~ pc1_wellwritten * like_fiction + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc1xlikefic)
+anova(lmIFG_pc1, lmIFG_pc1xlikefic) #p=0.064
+lmIFG_pc1xNfC <- lmer(beta_LitPos_IFG ~ pc1_wellwritten * need_for_cognition + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc1xNfC)
+anova(lmIFG_pc1, lmIFG_pc1xNfC) #p=0.611
+lmIFG_pc1xsimType <- lmer(beta_LitPos_IFG ~ pc1_wellwritten * engageType + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc1xsimType)
+anova(lmIFG_pc1, lmIFG_pc1xsimType) #p=0.071, pc1 better
+lmIFG_pc1xauthor <- lmer(beta_LitPos_IFG ~ pc1_wellwritten * author_recog + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIFG_pc1xauthor)
+anova(lmIFG_pc1, lmIFG_pc1xauthor) #p
+
+
+
+#LitPos_IPL
+lmIPL_pc1 <- lmer(beta_LitPos_IPL ~ pc1_wellwritten + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIPL_pc1)
+lmIPL_pc2 <- lmer(beta_LitPos_IPL ~ pc2_accessible + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIPL_pc2)
+lmIPL_pc3 <- lmer(beta_LitPos_IPL ~ pc3_interesting + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIPL_pc3)
+lmIPL_imagery <- lmer(beta_LitPos_IPL ~ Imagery_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIPL_imagery)
+lmIPL_EmoEng <- lmer(beta_LitPos_IPL ~ Emotional_Engagement_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmIPL_EmoEng)
+anova(lmIPL_pc1, lmIPL_pc2, lmIPL_pc3) #pc3 better than pc1
+anova(lmIPL_imagery, lmIPL_EmoEng) #no sig diff
+
+#LitPos_Precu
+lmPrecu_pc1 <- lmer(beta_LitPos_Precu ~ pc1_wellwritten + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmPrecu_pc1)
+lmPrecu_pc2 <- lmer(beta_LitPos_Precu ~ pc2_accessible + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmPrecu_pc2)
+lmPrecu_pc3 <- lmer(beta_LitPos_Precu ~ pc3_interesting + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmPrecu_pc3)
+lmPrecu_imagery <- lmer(beta_LitPos_Precu ~ Imagery_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmPrecu_imagery)
+lmPrecu_EmoEng <- lmer(beta_LitPos_Precu ~ Emotional_Engagement_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmPrecu_EmoEng)
+anova(lmPrecu_pc1, lmPrecu_pc2, lmPrecu_pc3) #pc3 better than pc1
+anova(lmPrecu_imagery, lmPrecu_EmoEng) #??
+
+#LitNeg
+lmSTG_pc1 <- lmer(beta_LitNeg ~ pc1_wellwritten + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmSTG_pc1)
+lmSTG_pc2 <- lmer(beta_LitNeg ~ pc2_accessible + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmSTG_pc2)
+lmSTG_pc3 <- lmer(beta_LitNeg ~ pc3_interesting + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmSTG_pc3)
+lmSTG_imagery <- lmer(beta_LitNeg ~ Imagery_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmSTG_imagery)
+lmSTG_EmoEng <- lmer(beta_LitNeg ~ Emotional_Engagement_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+summary(lmSTG_EmoEng)
+anova(lmSTG_pc1, lmSTG_pc2, lmSTG_pc3) #pc2 better 
+anova(lmSTG_imagery, lmSTG_EmoEng) #no sig diff
+
+#EmoNeg
+lmFPCN_pc1 <- lm(psc_EmoNeg ~ pc1_wellwritten, data = ROI_analysis)
+plot(cooks.distance(lmFPCN_pc1))
+summary(lmFPCN_pc1)
+ggplot(data = ROI_analysis, aes(x = pc1_wellwritten, y = psc_FPAN_BinEmoNeg)) + 
+  geom_point()
+ggplot(data = ROI_analysis, aes(x = pc2_accessible, y = psc_FPAN_BinEmoNeg)) + 
+  geom_point()
+ggplot(data = ROI_analysis, aes(x = pc3_interesting, y = psc_FPAN_BinEmoNeg)) + 
+  geom_point()
+ggplot(data = ROI_analysis, aes(x = Imagery_items, y = psc_FPAN_BinEmoNeg)) + 
+  geom_point()
+ggplot(data = ROI_analysis, aes(x = Emotional_Engagement_items, y = psc_FPAN_BinEmoNeg)) + 
+  geom_point()
+  
+lmFPCN_pc2 <- lmer(psc_FPAN_BinEmoNeg ~ pc2_accessible + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+lmFPCN_pc2 <- lm(psc_FPAN_BinEmoNeg ~ pc2_accessible, data = ROI_analysis)
+plot(cooks.distance(lmFPCN_pc2))
+summary(lmFPCN_pc2)
+lmFPCN_pc3 <- lmer(psc_FPAN_BinEmoNeg ~ pc3_interesting + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+lmFPCN_pc3 <- lm(psc_FPAN_BinEmoNeg ~ pc3_interesting, data = ROI_analysis)
+plot(cooks.distance(lmFPCN_pc3))
+summary(lmFPCN_pc3)
+lmFPCN_imagery <- lmer(psc_FPAN_BinEmoNeg ~ Imagery_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+lmFPCN_imagery <- lm(psc_FPAN_BinEmoNeg ~ Imagery_items, data = ROI_analysis)
+plot(cooks.distance(lmFPCN_imagery))
+summary(lmFPCN_imagery)
+lmFPCN_EmoEng <- lmer(psc_FPAN_BinEmoNeg ~ Emotional_Engagement_items + (1|Story) 
+                  + (1|fMRI_subj), data = ROI_analysis)
+lmFPCN_EmoEng <- lm(psc_FPAN_BinEmoNeg ~ Emotional_Engagement_items, data = ROI_analysis)
+plot(cooks.distance(lmFPCN_EmoEng))
+summary(lmFPCN_EmoEng)
+anova(lmFPCN_pc1, lmFPCN_pc2, lmFPCN_pc3) 
+anova(lmFPCN_imagery, lmFPCN_EmoEng) 
+
+# #ROI predicted by individual questionnaire results
+# lmIPL_qnns <- lmer(beta_LitPos_IPL ~ pc1_wellwritten * like_fiction  + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmIPL_qnns)
+# lmIFG_qnns <- lmer(beta_LitPos_IFG ~ care_about_style + like_fiction + num_novels_lastyr + 
+#                                often_read + IRI_fantasy + need_for_cognition + need_for_affect +
+#                                author_recog + EQ + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmIFG_qnns)
+# lmPrecu_qnns <- lmer(beta_LitPos_Precu ~ care_about_style + like_fiction + num_novels_lastyr + 
+#                                often_read + IRI_fantasy + need_for_cognition + need_for_affect +
+#                                author_recog + EQ + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmPrecu_qnns)
+# lmSTG_qnns <- lmer(beta_LitNeg ~ care_about_style + like_fiction + num_novels_lastyr + 
+#                                often_read + IRI_fantasy + need_for_cognition + need_for_affect +
+#                                author_recog + EQ + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmSTG_qnns)
+# lmFPCN_qnns <- lmer(beta_EmoNeg ~ IRI_fantasy + (1|Story) + (1|fMRI_subj), data = ROI_analysis)
+# summary(lmFPCN_qnns)
+# 
+# anova(lmIPL_qnns,lmIFG_qnns)
+```
+

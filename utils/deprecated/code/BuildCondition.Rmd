@@ -1,0 +1,28 @@
+---
+title: "BuildCondition"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+emoDHOCleaned <- read.csv("~/Documents/GitHub/RStudio/thesis/emoDHOFinal.csv", header = TRUE, sep = ",")
+
+str(emoDHOCleaned)
+emoDHOCleaned <- transform(emoDHOCleaned, MN = rowMeans(emoDHOCleaned[ ,4:26], na.rm = TRUE))
+emoDHOCleaned <- transform(emoDHOCleaned, EndTime = emoDHOCleaned$Onset + emoDHOCleaned$Duration)
+#center(data = emoDHOCleaned, vars = "MN", binary.inputs = "center",
+#  binary.factors = TRUE, weights = NULL)
+#plot(emoDHOCleaned$X, emoDHOCleaned$MN)
+write.csv(emoDHOCleaned, file = "~/Desktop/emoDHOCleaned.csv")
+
+emoDMOCleaned <- read.csv("~/Documents/GitHub/RStudio/thesis/emoDMOFinal.csv", header = TRUE, sep = ",")
+
+str(emoDMOCleaned)
+emoDMOCleaned <- transform(emoDMOCleaned, MN = rowMeans(emoDMOCleaned[ ,4:26], na.rm = TRUE))
+emoDMOCleaned <- transform(emoDMOCleaned, EndTime = emoDMOCleaned$Onset + emoDMOCleaned$Duration)
+#center(data = emoDMOCleaned, vars = "MN", binary.inputs = "center",
+#  binary.factors = TRUE, weights = NULL)
+#plot(emoDMOCleaned$X, emoDMOCleaned$MN)
+write.csv(emoDMOCleaned, file = "~/Desktop/emoDMOCleaned.csv")
+
+```
+

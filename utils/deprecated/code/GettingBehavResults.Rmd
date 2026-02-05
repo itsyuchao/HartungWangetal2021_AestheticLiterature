@@ -1,0 +1,31 @@
+---
+title: "GettingBehResults"
+author: "Yuchao Wang"
+date: "10/18/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+```
+
+```{r}
+emoResult <- read.csv(file="Verhalen_Emotional+Arousal_October+1%2C+2019_13.27.csv", 
+                  header = TRUE, sep = ",", stringsAsFactors = FALSE)
+emoResult <- emoResult[-c(1,2), ] #get rid of title row
+emoResult <- emoResult[-c(1:9), ] #get rid of preview Test results
+emoResult <- emoResult[-c(15:17,28), ] #get rid of incomplete results
+
+
+litResult <- read.csv(file="Verhalen_Literariness_October+1%2C+2019_13.28.csv", 
+                  header = TRUE, sep = ",", stringsAsFactors = FALSE)
+litResult <- litResult[-c(1,2), ] #get rid of title row
+litResult <- litResult[-c(1:10), ] #get rid of preview Test results
+
+emoResult <- spread(emoResult, emoResult$Q1.2_Browser
+                    , sep = "_")
+#emoResult %>% pivot_longer(names_to = c("question", ".spec"), 
+#                          names_sep = "_", 
+#                          values_drop_na = FALSE) 
+```

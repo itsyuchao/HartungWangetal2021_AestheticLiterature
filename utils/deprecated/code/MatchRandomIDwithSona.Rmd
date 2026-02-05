@@ -1,0 +1,24 @@
+---
+title: "MatchRandomIDwithSona"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+emo101 <- read_csv("Verhalen_Emotional+Arousal_October+1%2C+2019_13.27.csv", 
+    col_names = FALSE)
+
+lit101 <- read_csv("Verhalen_Literariness_October+1%2C+2019_13.28.csv", 
+    col_names = FALSE)
+
+
+lit101 <- lit101[-c(3:13),-c(3:307)]
+emo101 <- emo101[-c(3:12), -c(3:392)]
+emo101 <- emo101[-c(17:19,30),]
+write_csv(emo101, path = "EmotionSurvey10_1.csv")
+write_csv(lit101, path = "LiterarinessSurvey10_1.csv")
+```

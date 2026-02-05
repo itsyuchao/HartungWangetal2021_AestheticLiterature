@@ -1,0 +1,94 @@
+---
+title: "CreateEventBoundaries"
+author: "Yuchao Wang"
+date: "11/7/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Match 2V according to OV, include=FALSE} 
+DM2Vmarked <- read.csv(file = "thesis/emoDM2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+for (index in 1:1233) {
+  if (is.na(DMOmarked$marker_event[index])) {
+    next
+  }
+  else {
+    find.match <- which(DM2Vmarked$word == DMOmarked$word[index], arr.ind = TRUE)
+    num.match <- length(find.match)
+    if (num.match == 0) {
+      print(paste(DMOmarked$word[index], " at row ", index, " has no match in 2V", sep = ""))
+    }
+    else {
+      if (num.match ==1) {
+        DM2Vmarked$marker_event[find.match] <- 1 
+      }
+      else {
+        print(paste(DMOmarked$word[index], " at row ", index, " has multiple matches at row ", find.match, " in 2V", sep = ""))
+      }
+    }
+  }
+}
+#write.csv(DM2Vmarked, file = "thesis/emoDM2VFinal_eventMarked.csv", na = "")
+
+```
+
+
+## Adding MN and Onset based on event boundaries 
+
+* Event boundaries were created by Franziska Hartung on the original, 1st person perspective version (`O`) of both stories. 
+* The same event boundaries were created on the 3rd person perspective versions (`2V`) using a separate script.
+* **Do not** run this chunk again because all `_eventMarked.csv`, which initially only contains a column of event markers in addition to the *per word* `Final` files, have been processed to add MN and SE *per event*.    
+
+```{r New columns of event boundaries, include=FALSE} 
+emoDHOmarked <- read.csv(file = "emoDHOFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+emoDH2Vmarked <- read.csv(file = "emoDH2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+emoDMOmarked <- read.csv(file = "emoDMOFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+emoDM2Vmarked <- read.csv(file = "emoDM2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+litDHOmarked <- read.csv(file = "litDHOFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+litDH2Vmarked <- read.csv(file = "litDH2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+litDMOmarked <- read.csv(file = "litDMOFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+litDM2Vmarked <- read.csv(file = "litDM2VFinal_eventMarked.csv", header = T, sep = ",", stringsAsFactors = FALSE)
+
+addEventParam <- function(dataEventMarked) {
+#initialize condition for search
+  begin_row <- 1
+  end_row <- 1
+  total_row <- nrow(dataEventMarked)
+  #search loop 
+  while (end_row <= total_row) {
+    if  (is.na(dataEventMarked$marker_event[end_row])) {
+      end_row <- end_row+1
+    }
+    else {
+      dataEventMarked$onset_event[end_row] <- dataEventMarked$Onset[begin_row]
+      dataEventMarked$duration_event[end_row] <- sum(dataEventMarked$Duration[begin_row:end_row])
+      dataEventMarked$MN_event[end_row] <- mean(dataEventMarked$MN[begin_row:end_row], na.rm = TRUE)
+      begin_row <- end_row+1
+      end_row <- end_row+1
+    }
+  }
+  return(dataEventMarked)
+}
+
+emoDHOmarked <- addEventParam(emoDHOmarked)
+emoDH2Vmarked <- addEventParam(emoDH2Vmarked)
+emoDMOmarked <- addEventParam(emoDMOmarked)
+emoDM2Vmarked <- addEventParam(emoDM2Vmarked)
+litDHOmarked <- addEventParam(litDHOmarked)
+litDH2Vmarked <- addEventParam(litDH2Vmarked)
+litDMOmarked <- addEventParam(litDMOmarked)
+litDM2Vmarked <- addEventParam(litDM2Vmarked)
+
+write.csv(emoDHOmarked, file = "emoDHOFinal_eventMarked.csv", na = "")
+write.csv(emoDH2Vmarked, file = "emoDH2VFinal_eventMarked.csv", na = "")
+write.csv(emoDMOmarked, file = "emoDMOFinal_eventMarked.csv", na = "")
+write.csv(emoDM2Vmarked, file = "emoDM2VFinal_eventMarked.csv", na = "")
+write.csv(litDHOmarked, file = "litDHOFinal_eventMarked.csv", na = "")
+write.csv(litDH2Vmarked, file = "litDH2VFinal_eventMarked.csv", na = "")
+write.csv(litDMOmarked, file = "litDMOFinal_eventMarked.csv", na = "")
+write.csv(litDM2Vmarked, file = "litDM2VFinal_eventMarked.csv", na = "")
+```
